@@ -7,6 +7,9 @@ import numpy as np
 # Initialize the Dash app
 app = dash.Dash(__name__)
 
+# Expose the server for Gunicorn
+server = app.server  # <---- Add this line
+
 # Layout of the web app
 app.layout = html.Div([
     html.H2("Interactive Sine Wave"),

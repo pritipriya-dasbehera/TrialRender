@@ -16,6 +16,7 @@ default_vy = "y*(2*x-y)"
 
 # Initialize app with Bootstrap theme
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LUX])
+server = app.server  # Required for deployment
 
 # Layout
 app.layout = html.Div(style={

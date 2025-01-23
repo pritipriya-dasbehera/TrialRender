@@ -4,3 +4,4 @@ numpy
 sympy
 gunicorn
 matplotlib
+dash-bootstrap-components

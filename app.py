@@ -4,6 +4,7 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 import io
 import base64
 
@@ -59,7 +60,7 @@ app.layout = html.Div(style={
         })
     ], style={'maxWidth': '600px', 'width': '100%', 'paddingBottom': '20px'}),
 
-    # Line thickness and colormap dropdown placed side by side
+    # Line thickness, Colormap, x and y range dropdown placed side by side
     html.Div([
         html.Div([
             html.Label("Min Line Thickness:", style={'fontSize': '14px', 'color': '#555'}),
@@ -87,46 +88,36 @@ app.layout = html.Div(style={
                 style={
                     'width': '100%', 'padding': '8px', 'borderRadius': '5px', 'border': '1px solid #ddd', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)',
                     "height": "50px",  # Set the height of the dropdown button
-                    "minHeight": "35px",  # Ensure the dropdown button height is consistent
+                    "minHeight": "50px",  # Ensure the dropdown button height is consistent
                 },
-                className="dropdown-style"  # Custom class for more control
             ),
         ], style={'display': 'inline-block', 'width': '48%', 'padding': '10px', 'boxSizing': 'border-box'}),
+
     ], style={'display': 'flex', 'justifyContent': 'space-between', 'padding': '20px', 'maxWidth': '1000px'}),
 
-    # # Line thickness and colormap dropdown placed side by side
-    # html.Div([
-    #     html.Div([
-    #         html.Label("Min Line Thickness:", style={'fontSize': '14px', 'color': '#555'}),
-    #         dcc.Input(id="min-thickness", type="number", value=0.5, step=0.1, style={
-    #             "width": "100%", "padding": "10px", "borderRadius": "5px", "border": "1px solid #ddd", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)",
-    #             "height": "50px"  # Set the height explicitly
-    #         }),
-    #     ], style={'display': 'inline-block', 'width': '48%', 'padding': '10px', 'boxSizing': 'border-box'}),
+    # x and y Range input section
+    html.Div([
+        html.Div([
+            html.Label("X Range (min, max):", style={'fontSize': '14px', 'color': '#555'}),
+            dcc.Input(id="x-min", type="number", value=-20, style={
+                "width": "48%", "padding": "8px", "borderRadius": "5px", "border": "1px solid #ddd", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"
+            }),
+            dcc.Input(id="x-max", type="number", value=20, style={
+                "width": "48%", "padding": "8px", "borderRadius": "5px", "border": "1px solid #ddd", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"
+            }),
+        ], style={'display': 'flex', 'justifyContent': 'space-between', 'width': '100%', 'padding': '10px'}),
 
-    #     html.Div([
-    #         html.Label("Max Line Thickness:", style={'fontSize': '14px', 'color': '#555'}),
-    #         dcc.Input(id="max-thickness", type="number", value=3.0, step=0.1, style={
-    #             "width": "100%", "padding": "10px", "borderRadius": "5px", "border": "1px solid #ddd", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)",
-    #             "height": "50px"  # Set the height explicitly
-    #         }),
-    #     ], style={'display': 'inline-block', 'width': '48%', 'padding': '10px', 'boxSizing': 'border-box'}),
+        html.Div([
+            html.Label("Y Range (min, max):", style={'fontSize': '14px', 'color': '#555'}),
+            dcc.Input(id="y-min", type="number", value=-20, style={
+                "width": "48%", "padding": "8px", "borderRadius": "5px", "border": "1px solid #ddd", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"
+            }),
+            dcc.Input(id="y-max", type="number", value=20, style={
+                "width": "48%", "padding": "8px", "borderRadius": "5px", "border": "1px solid #ddd", "boxShadow": "0 2px 4px rgba(0,0,0,0.1)"
+            }),
+        ], style={'display': 'flex', 'justifyContent': 'space-between', 'width': '100%', 'padding': '10px'}),
 
-    #     html.Div([
-    #         html.Label("Choose Colormap:", style={'fontSize': '14px', 'color': '#555'}),
-    #         dcc.Dropdown(
-    #             id="cmap-dropdown",
-    #             options=[{"label": cmap, "value": cmap} for cmap in CMAPS],
-    #             value="plasma",
-    #             clearable=False,
-    #             style={
-    #                 'width': '100%', 'padding': '10px', 'borderRadius': '5px', 'border': '1px solid #ddd', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)',
-    #                 "height": "50px"  # Set the height explicitly
-    #             }
-    #         ),
-    #     ], style={'display': 'inline-block', 'width': '48%', 'padding': '10px', 'boxSizing': 'border-box'}),
-    # ], style={'display': 'flex', 'justifyContent': 'space-between', 'padding': '20px', 'maxWidth': '1000px'})
-
+    ], style={'padding': '20px', 'maxWidth': '1000px'}),
 
     # Streamplot Image
     html.Div([
@@ -164,20 +155,30 @@ app.layout = html.Div(style={
     Input("min-thickness", "value"),
     Input("max-thickness", "value"),
     Input("cmap-dropdown", "value"),
+    Input("x-min", "value"),
+    Input("x-max", "value"),
+    Input("y-min", "value"),
+    Input("y-max", "value"),
 )
-def update_plot(vx_eq, vy_eq, min_thickness, max_thickness, cmap):
+def update_plot(vx_eq, vy_eq, min_thickness, max_thickness, cmap, x_min, x_max, y_min, y_max):
     try:
         # Grid resolution
-        r = np.linspace(-20, 20, 100)
-        x, y = np.meshgrid(r, r)
+        x_range = np.linspace(x_min, x_max, 100)
+        y_range = np.linspace(y_min, y_max, 100)
+        x, y = np.meshgrid(x_range, y_range)
 
         # Using eval to dynamically calculate the equations
         vx = eval(vx_eq)  # This will calculate vx based on the input equation
         vy = eval(vy_eq)  # Similarly for vy
 
+        # Normalize the vector magnitudes for line thickness
+        speed = np.sqrt(vx**2 + vy**2)
+        norm = Normalize(vmin=speed.min(), vmax=speed.max())
+        line_thickness = np.clip(norm(speed) * (max_thickness - min_thickness) + min_thickness, min_thickness, max_thickness)
+
         # Calculate streamplot
         fig, ax = plt.subplots(figsize=(8, 8))
-        ax.streamplot(x, y, vx, vy, color=vx, linewidth=2, cmap=cmap, density=2)
+        ax.streamplot(x, y, vx, vy, color=vx, linewidth=line_thickness, cmap=cmap, density=2)
 
         # Save plot to BytesIO to send as base64
         buf = io.BytesIO()
